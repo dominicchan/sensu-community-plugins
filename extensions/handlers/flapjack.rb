@@ -89,8 +89,19 @@ module Sensu
           time: check[:executed],
           tags: tags
         }
-        @redis.lpush(options[:channel], MultiJson.dump(flapjack_event))
-        yield 'sent an event to the flapjack redis queue', 0
+        if check[:status] != 0
+          if check[:occurrences].nil?
+            occurrences = 1
+          else
+            occurrences = check[:occurrences]    
+          end 
+          if event[:occurrences] >= occurrences
+            @redis.lpush(options[:channel], MultiJson.dump(flapjack_event))
+            yield 'sent an event to the flapjack redis queue', 0
+          else
+            yield 'hushed due to event occurrence below threshold', 0
+          end
+        end
       end
     end
   end
